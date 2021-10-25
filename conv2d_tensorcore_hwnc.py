@@ -216,7 +216,8 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     cfg.define_knob("warp_col_tiles", [1, 2, 4, 8, 16])
     cfg.define_knob("chunk", [1, 2, 4, 8])
     cfg.define_knob("fuse_pack", [0, 1])
-    cfg.define_knob("split_block_k", [1, 2, 4, 8, 16, 32])
+    # cfg.define_knob("split_block_k", [1, 2, 4, 8, 16, 32])
+    cfg.define_knob("split_k_slices", [1, 2, 4])
     cfg.define_knob("vector_ws", [1, 8])
     cfg.define_knob("vector_as", [1, 8, 16])
     block_row_warps = cfg["block_row_warps"].val
@@ -226,7 +227,8 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     chunk = cfg["chunk"].val
     vector_as = cfg["vector_as"].val
     vector_ws = cfg["vector_ws"].val
-    split_block_k = cfg["split_block_k"].val
+    # split_block_k = cfg["split_block_k"].val
+    split_k_slices = cfg["split_k_slices"].val
     fuse_pack = cfg["fuse_pack"].val
     # block_row_warps = 1
     # block_col_warps = 2
@@ -266,14 +268,16 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
 
     # block_k = s[output].fuse(hc, wc)
 
-    block_i = s[output].fuse(hc, wc, nc) # hc, wc, nc = 7, 7, 1
+    nc = s[output].fuse(hc, wc, nc) # hc, wc, nc = 7, 7, 1
 
     # block_k, sub_block_k = s[output].split(block_k, factor=split_block_k)
 
-    block_i, nci = s[output].split(block_i, factor=warp_row_tiles)
-    block_i, nc = s[output].split(block_i, factor=block_row_warps)
+    nc, nci = s[output].split(nc, factor=warp_row_tiles)
+    block_i, nc = s[output].split(nc, factor=block_row_warps)
+
     oc, oci = s[output].split(oc, factor=warp_col_tiles)
     block_j, oc = s[output].split(oc, factor=block_col_warps)
+    
     # s[output].reorder(block_k, sub_block_k, block_i, block_j, nc, oc, nci, oci, nnc, ooc)
     s[output].reorder(block_i, block_j, nc, oc, nci, oci, nnc, ooc)
     t = s[output].fuse(nnc, ooc)
@@ -290,6 +294,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     # Schedule wmma store
     s[OL].compute_at(s[output], block_j)
     hc, wc, nc, oc, nnc, ooc = OL.op.axis
+    nc = s[output].fuse(hc, wc, nc)
     oc, oci = s[OL].split(oc, factor=warp_col_tiles)
     _, oc = s[OL].split(oc, factor=block_col_warps)
     nc, nci = s[OL].split(nc, factor=warp_row_tiles)
@@ -297,6 +302,10 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     s[OL].reorder(nc, oc, nci, oci, nnc, ooc)
     s[OL].bind(nc, thread_y)
     s[OL].bind(oc, thread_z)
+
+    # Split k dimension
+    block_k, ic = s[Conv].split(ic, npart=split_k_slices)
+    s[Conv].bind(block_k, block_z)
 
     # Schedule local computation
     s[ConvF].compute_at(s[OL], oc)
@@ -314,7 +323,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     compute_at_WS = cfg["compute_at_WS"].val
 
     # Move intermediate computation into each output compute tile
-
+`
     s[AF].compute_at(s[ConvF], kw)
     s[WF].compute_at(s[ConvF], kw)
 
@@ -333,7 +342,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     ty, yo = s[AS].split(xo, nparts=block_col_warps)
     t = s[AS].fuse(nn, ii)
     to, ti = s[AS].split(t, nparts=warp_size)
-    ti, _t = s[AS].split(ti, factor=vector_as)
+    ti, _t = s[AS].split(ti, factor=vector_as)`
     s[AS].bind(tx, thread_y)
     s[AS].bind(ty, thread_z)
     s[AS].bind(to, thread_x)
