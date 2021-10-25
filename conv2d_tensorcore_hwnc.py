@@ -266,7 +266,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
 
     # block_k = s[output].fuse(hc, wc)
 
-    block_i = s[output].fuse(nc, hc, wc) # nc, hc, wc = 1, 7, 7
+    block_i = s[output].fuse(hc, wc, nc) # hc, wc, nc = 7, 7, 1
 
     # block_k, sub_block_k = s[output].split(block_k, factor=split_block_k)
 
