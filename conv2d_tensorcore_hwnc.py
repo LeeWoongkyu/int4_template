@@ -294,7 +294,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     # Schedule wmma store
     s[OL].compute_at(s[output], block_j)
     hc, wc, nc, oc, nnc, ooc = OL.op.axis
-    nc = s[output].fuse(hc, wc, nc)
+    nc = s[OL].fuse(hc, wc, nc)
     oc, oci = s[OL].split(oc, factor=warp_col_tiles)
     _, oc = s[OL].split(oc, factor=block_col_warps)
     nc, nci = s[OL].split(nc, factor=warp_row_tiles)
@@ -303,12 +303,11 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     s[OL].bind(nc, thread_y)
     s[OL].bind(oc, thread_z)
 
-    # Split k dimension
-    block_k, ic = s[Conv].split(ic, npart=split_k_slices)
-    s[Conv].bind(block_k, block_z)
-
     # Schedule local computation
     s[ConvF].compute_at(s[OL], oc)
+    # Split k dimension
+    # block_k, ic = s[ConvF].split(ic, nparts=split_k_slices)
+    # s[ConvF].bind(block_k, block_z)
     h, w, n, o, nnf, oof = ConvF.op.axis
     ko, ki = s[ConvF].split(ic, factor=chunk)
     s[ConvF].reorder(ko, kh, ki, kw, n, o, nnf, oof, ii)
@@ -323,7 +322,6 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     compute_at_WS = cfg["compute_at_WS"].val
 
     # Move intermediate computation into each output compute tile
-`
     s[AF].compute_at(s[ConvF], kw)
     s[WF].compute_at(s[ConvF], kw)
 
@@ -342,7 +340,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     ty, yo = s[AS].split(xo, nparts=block_col_warps)
     t = s[AS].fuse(nn, ii)
     to, ti = s[AS].split(t, nparts=warp_size)
-    ti, _t = s[AS].split(ti, factor=vector_as)`
+    ti, _t = s[AS].split(ti, factor=vector_as)
     s[AS].bind(tx, thread_y)
     s[AS].bind(ty, thread_z)
     s[AS].bind(to, thread_x)
