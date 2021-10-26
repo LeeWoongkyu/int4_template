@@ -217,7 +217,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     cfg.define_knob("chunk", [1, 2, 4, 8])
     cfg.define_knob("fuse_pack", [0, 1])
     # cfg.define_knob("split_block_k", [1, 2, 4, 8, 16, 32])
-    cfg.define_knob("split_k_slices", [1, 2, 4])
+    # cfg.define_knob("split_k_slices", [1, 2, 4])
     cfg.define_knob("vector_ws", [1, 8])
     cfg.define_knob("vector_as", [1, 8, 16])
     block_row_warps = cfg["block_row_warps"].val
@@ -267,10 +267,9 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     kernel_scope, hc = s[output].split(hc, nparts=1)
 
     # block_k = s[output].fuse(hc, wc)
+    # block_k, sub_block_k = s[output].split(block_k, factor=split_block_k)
 
     nc = s[output].fuse(hc, wc, nc) # hc, wc, nc = 7, 7, 1
-
-    # block_k, sub_block_k = s[output].split(block_k, factor=split_block_k)
 
     nc, nci = s[output].split(nc, factor=warp_row_tiles)
     block_i, nc = s[output].split(nc, factor=block_row_warps)
@@ -279,7 +278,9 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     block_j, oc = s[output].split(oc, factor=block_col_warps)
     
     # s[output].reorder(block_k, sub_block_k, block_i, block_j, nc, oc, nci, oci, nnc, ooc)
+    
     s[output].reorder(block_i, block_j, nc, oc, nci, oci, nnc, ooc)
+    
     t = s[output].fuse(nnc, ooc)
     _, tx = s[output].split(t, factor=warp_size)
 
