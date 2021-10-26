@@ -228,7 +228,7 @@ def schedule_hwnc_tensorcore_cuda(cfg, s, Conv):
     vector_as = cfg["vector_as"].val
     vector_ws = cfg["vector_ws"].val
     # split_block_k = cfg["split_block_k"].val
-    split_k_slices = cfg["split_k_slices"].val
+    # split_k_slices = cfg["split_k_slices"].val
     fuse_pack = cfg["fuse_pack"].val
     # block_row_warps = 1
     # block_col_warps = 2
