@@ -178,6 +178,10 @@ def verify_conv2d_hwnc(
             % (np.mean(prof_res), np.std(prof_res))
             #% (evaluator(a, w, c).mean, evaluator(a, w, c).std)
         )
+        print(
+                "GFLOPS : %.2f"
+                % (2*batch*in_channel*in_size*in_size*num_filter*kernel*kernel/(stride*stride*np.mean(prof_res)*1000000))
+                )
 
     check_target("cuda")
 
@@ -344,10 +348,10 @@ def test_conv2d_hwnc_tensorcore():
     # spatial conv
 
     # batch size: 8
-    #tune_and_evaluate(8, 64, 56, 64, 3, 1, 1, dtype="int4") # stage 2
-    tune_and_evaluate(8, 128, 28, 128, 3, 1, 1, dtype="int8") # stage 3
-    tune_and_evaluate(8, 256, 14, 256, 3, 1, 1, dtype="int8") # stage 4
-    tune_and_evaluate(8, 512, 7, 512, 3, 1, 1, dtype="int8") # stage 5
+    # tune_and_evaluate(8, 64, 56, 64, 3, 1, 1, dtype="int4") # stage 2
+    # tune_and_evaluate(8, 128, 28, 128, 3, 1, 1, dtype="int8") # stage 3
+    # tune_and_evaluate(8, 256, 14, 256, 3, 1, 1, dtype="int8") # stage 4
+    # tune_and_evaluate(8, 512, 7, 512, 3, 1, 1, dtype="int8") # stage 5
     
 
 
