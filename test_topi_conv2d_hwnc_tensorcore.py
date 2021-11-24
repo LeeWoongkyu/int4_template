@@ -33,6 +33,9 @@ import argparse
 import logging
 import sys
 
+# import torch
+# import torch.cuda.profiler as profiler
+
 #logging.getLogger("autotvm").setLevel(logging.DEBUG)
 #logging.getLogger("autotvm").addHandler(logging.StreamHandler(sys.stdout))
 
@@ -59,8 +62,9 @@ _conv2d_hwnc_tensorcore_implement = {
 def verify_conv2d_hwnc(
     batch, in_channel, in_size, num_filter, kernel, stride, padding, dilation=1, dtype="int4"
 ):
-    # logfile = f"./logs/conv2d_{batch}_{in_channel}_{in_size}_{num_filter}_{kernel}_{stride}_{padding}_{dilation}_{dtype}_{args.n_trial}_{args.early_stopping}.log"
-    logfile = f"./logs/conv2d_{batch}_{in_channel}_{in_size}_{num_filter}_{kernel}_{stride}_{padding}_{dilation}_{dtype}_hawq.log"
+    logfile = f"./logs/conv2d_{batch}_{in_channel}_{in_size}_{num_filter}_{kernel}_{stride}_{padding}_{dilation}_{dtype}_{args.n_trial}_{args.early_stopping}.log"
+    # logfile = f"./logs/conv2d_{batch}_{in_channel}_{in_size}_{num_filter}_{kernel}_{stride}_{padding}_{dilation}_{dtype}_hawq.log"
+    # logfile = f"./logs/conv2d_{batch}_{in_channel}_{in_size}_{num_filter}_{kernel}_{stride}_{padding}_{dilation}_{dtype}_cutlass.log"
 
     """Test the conv2d with tensorcore for hwnc layout"""
     pad_top, pad_left, pad_bottom, pad_right = get_pad_tuple(padding, (kernel, kernel))
@@ -155,6 +159,7 @@ def verify_conv2d_hwnc(
             name="relu_%d_%d_%d_%d_%d_%d_%d_%d"
             % (batch, in_channel, in_size, num_filter, kernel, stride, padding_sum, dilation),
         )
+        
         func(a, w, c)
 
         rtol = 1e-3
@@ -183,6 +188,22 @@ def verify_conv2d_hwnc(
                 "GFLOPS : %.2f"
                 % (2*batch*in_channel*in_size*in_size*num_filter*kernel*kernel/(stride*stride*np.mean(prof_res)*1000000))
                 )
+       
+        '''
+        #############################################################################################
+        # For profiling
+        
+        # Warm up
+        for _ in range(5):
+            func(a, w, c)
+        
+        # Profile
+        with torch.autograd.profiler.emit_nvtx():
+            profiler.start()
+            func(a, w, c)
+            profiler.stop()
+        #############################################################################################
+        '''
 
     check_target("cuda")
 
@@ -343,7 +364,7 @@ def test_conv2d_hwnc_tensorcore():
     #batch, in_channel, in_size, num_filter, kernel, stride, padding, dilation=1, dtype="int4"
     '''
     
-    verify_conv2d_hwnc(8, 64, 58, 64, 3, 1, 0, dtype="int4") # stage 2
+    verify_conv2d_hwnc(8, 64, 56, 64, 3, 1, 1, dtype="int4") # stage 2
     
     ####################################################
     # spatial conv
