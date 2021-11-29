@@ -16,8 +16,8 @@
 # under the License.
 # pylint: disable=invalid-name, too-many-locals, too-many-arguments
 """Example code to do convolution."""
-import torch
-import torch.cuda.profiler as profiler
+# import torch
+# import torch.cuda.profiler as profiler
 
 import numpy as np
 import tvm
@@ -187,7 +187,7 @@ def verify_conv2d_hwnc(
                 "GFLOPS : %.2f"
                 % (2*batch*in_channel*in_size*in_size*num_filter*kernel*kernel/(stride*stride*np.mean(prof_res)*1000000))
                 )
-       
+        '''      
         #############################################################################################
         # For profiling
         
@@ -201,6 +201,7 @@ def verify_conv2d_hwnc(
             func(a, w, c)
             profiler.stop()
         #############################################################################################
+        '''
 
     check_target("cuda")
 
